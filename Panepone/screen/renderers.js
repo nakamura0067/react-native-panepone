@@ -1,23 +1,21 @@
 import React from "react";
-import Animated from "react-native-reanimated";
+import {Dimensions, View} from "react-native";
 
 const Box = (props) => {
   const width = props.size[0];
   const height = props.size[1];
-  const x = props.body.position.x - width / 2;
-  const y = props.body.position.y - height / 2;
-  const angle = props.body.angle;
+  const x = props.position[0];
+  const y = props.position[1];
 
   return (
-    <Animated.View
+    <View
       style={{
         position: "absolute",
         left: x,
         top: y,
         width: width,
         height: height,
-        transform: [{ rotate: angle + "rad" }],
-        backgroundColor: props.color || "pink",
+        backgroundColor: props.color,
       }}
     />
   );
