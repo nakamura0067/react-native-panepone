@@ -1,6 +1,7 @@
 import React from 'react';
 import {Text, View, Button} from 'react-native';
 import { commonStyles } from '../styles/commonStyles';
+import GameArea from './GameArea';
 
 export function GameScreen({route}){
   const {gameSpeed} = route.params;
@@ -23,12 +24,7 @@ export function GameScreen({route}){
           <Text style={commonStyles.text}>0000000000</Text>
         </View>
       </View>
-      <View id="game_area" style={commonStyles.container}>
-        <View id="ojama_area" style={commonStyles.container}>
-        </View>
-        <View id="field_area" style={commonStyles.container}>
-        </View>
-      </View>
+      <GameArea/>
     </View>
   );
 }
