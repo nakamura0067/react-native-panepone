@@ -2,20 +2,17 @@ import React from "react";
 import {View} from "react-native";
 
 const Box = (props) => {
-  const width = props.size[0];
-  const height = props.size[1];
-  const x = width / 2;
-  const y = height / 2;
-
   return (
     <View
       style={{
         position: "absolute",
-        left: x,
-        top: y,
-        width: width,
-        height: height,
-        backgroundColor: props.color || "pink",
+        top: props.pos[0],
+        left: props.pos[1],
+        width: props.size[0],
+        height: props.size[1],
+        backgroundColor: props.color,
+        borderColor:'black',
+        borderWidth:1,
       }}
     />
   );
