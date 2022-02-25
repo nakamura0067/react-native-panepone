@@ -1,11 +1,18 @@
 import React from "react";
 import { GameEngine } from "react-native-game-engine";
-import { CreatePanel, MovePanel, CleanBoxes } from "./systems";
+import { CreatePanel, MovePanel, RiseUpPanel } from "./systems";
 
-const GameArea = () => {
+const GameArea = (props) => {
+
+
   return (
     <GameEngine
-      systems={[CreatePanel,MovePanel]}
+      style={{
+        width:WIDTH,
+        height:HEIGHT,
+        backgroundColor:"white"
+      }}
+      systems={[CreatePanel]}
       entities={{}}
     >
     </GameEngine>
