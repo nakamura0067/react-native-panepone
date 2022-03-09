@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {Text, View} from 'react-native';
 import { commonStyles } from '../styles/commonStyles';
 import { GameEngine } from "react-native-game-engine";
-import { CreatePanel, MovePanel, RiseUpPanel } from "./systems";
+import { CreatePanel, MovePanel, RiseUpPanel, FallPanel } from "./systems";
 
 export function GameScreen({route}){
   const {gameSpeed} = route.params;
@@ -40,7 +40,7 @@ export function GameScreen({route}){
             width:WIDTH,
             height:HEIGHT
           }}
-          systems={[CreatePanel, MovePanel, RiseUpPanel]}
+          systems={[CreatePanel, MovePanel, RiseUpPanel, FallPanel]}
           entities={{}}
           running={isGameRunning}
           onEvent={(e) => {

@@ -18,62 +18,117 @@ let gameState = "START";
 let startPos = [0, 0];
 let previousTime = 0;
 let upCount = 0;
-
+let downCount = 0;
+/**
+ * 2点間の距離を求める
+ * @param {int} x1
+ * @param {int} y1
+ * @param {int} x2
+ * @param {int} y2
+ * @returns 2点間の距離
+ */
 const distance = ([x1, y1], [x2, y2]) => {
 	return Math.sqrt(Math.abs(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))
 )};
 
-const rowCountSameColor = (state, panelState, id, count) => {
-  count = count + 1;
-  if (id > 5 && panelState === state[id-6].panelState) {
-    count = rowCountSameColor(state, state[id-6].panelState, id-6, count);
-  }
-  return count;
+/**
+ * 行で同色の数をカウント
+ * @param {Object} state 
+ * @param {String} key パネルID
+ * @param {int} count 同色の数
+ * @param {Boolean} chainFlg カウントした色を消すかどうか
+ * @returns 同色の数
+ */
+const countRowSameColor = (state, key, count, chainFlg) => {
+	panelState = state[key].panelState;
+	state[key].panelState = -1;
+	count++;
+
+	// 一マス右のパネルの色を判定
+	if(key % COLS != 0 && state[key+1]){
+		if (state[key + 1].panelState > 0 && state[key + 1].panelState === panelState) {
+			count = countRowSameColor(state, key + 1, count, chainFlg);
+		}
+	}
+	
+	// 一マス左のパネルの色を判定
+	if(key % COLS != 1 && state[key-1]) {
+		if (state[key - 1].panelState > 0 && state[key - 1].panelState === panelState) {
+			count = countRowSameColor(state, key - 1, count, chainFlg);
+		}
+	}
+	
+	if (!chainFlg) state[key].panelState = panelState;
+	return count;
 }
 
-const colCountSameColor = (state, panelState, id, count) => {
-  count = count + 1;
-  if ((id % 6) > 0 && panelState === state[id-1].panelState) {
-    count = colCountSameColor(state, state[id-1].panelState,id-1,count);
-  }
-  return count;
+/**
+ * 列で同色の数をカウント
+ * @param {Object} state 
+ * @param {String} key パネルID
+ * @param {int} count 同色の数
+ * @param {Boolean} chainFlg カウントした色を消すかどうか
+ * @returns 同色の数
+ */
+const countColSameColor = (state, key, count, chainFlg) => {
+	panelState = state[key].panelState;
+	state[key].panelState = -1;
+	count++;
+	// 一マス下のパネルの色を判定
+	if(key <= (ROWS - 2) * COLS && state[key+COLS]) {
+		if (state[key + COLS].panelState > 0 && state[key + COLS].panelState === panelState) {
+			count = countColSameColor(state, key + COLS, count, chainFlg);
+		}
+	}
+
+	// 一マス上のパネルの色を判定
+	if(key > COLS && state[key-COLS]) {
+		if (state[key - COLS].panelState > 0 && state[key - COLS].panelState === panelState) {
+			count = countColSameColor(state, key - COLS, count, chainFlg);
+		}
+	}
+	
+	if (!chainFlg) state[key].panelState = panelState;
+	return count;
 }
 
+/**
+ * 初期生成
+ * @param {*} state 
+ * @returns state
+ */
 const CreatePanel = (state) => {
-
 	if (gameState == "START") {
-		for (let row = 0; row<ROWS; row++){
-			for (let col = 0; col<COLS; col++){
-				if(ROWS - INIT_ROWS -1 <= row && row <= ROWS) {
-        	// 縦横3マスが同色になっていないか確認
+		for (let row = 1; row<=ROWS; row++){
+			for (let col = 1; col<=COLS; col++){
+				if(ROWS - INIT_ROWS <= row) {
+					state[++panelIds] = {
+						id:panelIds,
+						pos: [
+							(row - 1) * BOX_SIZE,
+							(col - 1) * BOX_SIZE
+						],
+						panelState: 0,
+						renderer: Panel
+					}
+	        
+					// 縦横3マスが同色になっていないか確認
 	     	  let rowCount;
 	        let colCount;
-					let panelState;
 	        do {
-          	panelState = Math.floor(Math.random() * 5) + 1;
+						state[panelIds].panelState = Math.floor(Math.random() * 5) + 1,
           	rowCount = 0;
           	colCount = 0;
-          	rowCount = rowCountSameColor(state, panelState, panelIds+1, rowCount);
-          	colCount = colCountSameColor(state, panelState, panelIds+1, colCount);
+          	rowCount = countRowSameColor(state, panelIds, rowCount, false);
+          	colCount = countColSameColor(state, panelIds, colCount, false);
 	        } while(rowCount > 2 || colCount > 2);
 				
+			} else {
 					state[++panelIds] = {
 						id:panelIds,
-			    	queue:[row, col],
     				pos: [
-							row * BOX_SIZE,
-							col * BOX_SIZE
-						],
-    				panelState: panelState,
-    				renderer: Panel
-					}
-				} else {
-					state[++panelIds] = {
-						id:panelIds,
-			    	queue:[row, col],
-    				pos: [
-							row * BOX_SIZE,
-							col * BOX_SIZE
+							(row - 1) * BOX_SIZE,
+							(col - 1) * BOX_SIZE
 						],
     				panelState: 0,
     				renderer: Panel
@@ -87,10 +142,15 @@ const CreatePanel = (state) => {
 	return state;
 };
 
+/**
+ * パネル移動処理
+ * @param {*} state 
+ * @param {*} touches
+ * @returns 
+ */
 const MovePanel = (state, { touches }) => {
 	let panel;
 	let start = touches.find(x => x.type === "start");
-	
 	if (start) {
 		let eventPos = [
 			start.event.pageX - offset[0],
@@ -100,9 +160,11 @@ const MovePanel = (state, { touches }) => {
 			let panel = state[key];
 			return (
 				panel &&
-				distance([
-					panel.pos[1] + BOX_SIZE / 2,
-					panel.pos[0] + BOX_SIZE / 2],
+				distance(
+					[
+						panel.pos[1] + BOX_SIZE / 2,
+						panel.pos[0] + BOX_SIZE / 2
+					],
 					eventPos
 				) < BOX_SIZE / Math.sqrt(2)
 			);
@@ -121,16 +183,18 @@ const MovePanel = (state, { touches }) => {
 		let panel = state[panelId];
 		let deltaX = end.event.pageX - startPos[0];
 		if (panel) {
-			if ((deltaX > BOX_SIZE/2) && (panel.id-1)%6 != 5){
+			if ((deltaX > BOX_SIZE/2) && panel.id % ROWS != 0){
 				let panelState = panel.panelState;
 				panel.panelState = state[panel.id+1].panelState;
 				state[panel.id+1].panelState = panelState;
+				chain(state,[panel.id,panel.id+1]);
 			}
 
-			if (deltaX < -BOX_SIZE/2 && (panel.id-1)%6 != 0){
+			if (deltaX < -BOX_SIZE/2 && panel.id % ROWS != 1){
 				let panelState = panel.panelState;
 				panel.panelState = state[panel.id-1].panelState;
 				state[panel.id-1].panelState = panelState;
+				chain(state,[panel.id,panel.id-1]);
 			}
 			
 			startPos = [0,0];
@@ -140,11 +204,13 @@ const MovePanel = (state, { touches }) => {
 	return state;
 };
 
-const CleanPanels = (state, { touches }) => {
-	return state;
-};
-
-
+/**
+ * 自動上昇処理
+ * @param {*} state 
+ * @param {*} time
+ * @param {*} dispatch
+ * @returns 
+ */
 const RiseUpPanel = (state, { time, dispatch }) => {
 	
 	if (previousTime === 0 ){
@@ -170,21 +236,109 @@ const RiseUpPanel = (state, { time, dispatch }) => {
 					panel.pos[1]
 				]
 
-				if (Object.keys(state).length > panel.id + 5) {
-					panel.panelState = state[panel.id+6].panelState;
-				} else {
-          panel.panelState = Math.floor(Math.random() * 5) + 1;
+				if (Math.trunc((panel.id-1) / COLS) + 1 < 13) {
+					panel.panelState = state[panel.id + COLS].panelState;
 				}
+				
+				if (Math.trunc((panel.id-1) / COLS) + 1 === 13) {
+	        let rowCount;
+	        do {
+          	panel.panelState = Math.floor(Math.random() * 5) + 1;
+          	rowCount = 0;
+          	rowCount = countRowSameColor(state, key, rowCount,false);
+	        } while(rowCount > 2);
+				}
+				
+			});
 
-				if (panel.id < 6 && panel.panelState > 0){
+			chain(state, [
+				(ROWS-2)*COLS+1,
+				(ROWS-2)*COLS+2,
+				(ROWS-2)*COLS+3,
+				(ROWS-2)*COLS+4,
+				(ROWS-2)*COLS+5,
+				(ROWS-2)*COLS+6
+			]);
+
+			Object.keys(state).forEach(key=> {
+				let panel = state[key];
+				if (panel.id <= COLS && panel.panelState > 0){
 					// ゲームオーバ
 					dispatch("game-over");
 				}
 			});
-		}
-	}
+	}}
 	
 	return state;
 }
 
-export { CreatePanel, MovePanel, RiseUpPanel };
+const FallPanel = (state, time) => {
+	Object.keys(state).sort((a,b) => (a > b ? -1:1)).forEach(key =>{
+		let panel = state[key];
+		if (panel.id + COLS < (ROWS - 1 ) * COLS) {
+			// 落下対象のパネルか判定
+			if (panel.panelState > 0 && 
+				(state[panel.id + COLS].panelState <= 0 || state[panel.id + COLS].isFalling)) {
+					panel.isFalling = true;
+					panel.pos = [
+						panel.pos[0] + 5,
+						panel.pos[1]
+					];
+					downCount++;
+			}
+		}
+	});
+
+	if (downCount === 10) {
+		Object.keys(state).sort((a,b) => (a > b ? -1:1)).forEach(key =>{
+			let panel = state[key];
+			if (panel.isFalling || (panel.id - COLS) > 0) {
+				panel.panelState = state[panel.id - COLS].panelState;
+				panel.isFalling = false;
+				panel.pos = [
+					panel.pos[0] - 50,
+					panel.pos[1]
+				]
+				downCount = 0;
+			} else if (panel.id - COLS <= 0) {
+				panel.panelState = 0;
+				panel.isFalling = false;
+				panel.pos = [
+					panel.pos[0] - 50,
+					panel.pos[1]
+				]
+			}
+		});
+	}
+	return state;
+}
+
+/**
+ * 連鎖処理
+ * @param {*} state 
+ * @param {*} movePanels 
+ */
+const chain = (state, movePanels) => {
+	movePanels.forEach(key => {
+		let chainFlg = false;
+		let rowCount = countRowSameColor(state, key, 0, chainFlg);
+		let colCount = countColSameColor(state, key, 0, chainFlg);
+		if (rowCount > 2 && colCount > 2) {
+			chainFlg = true;
+			let panelState = state[key].panelState;
+			countRowSameColor(state, key, 0, chainFlg);
+			state[key].panelState = panelState;
+			countColSameColor(state, key, 0, chainFlg);
+		} else if(rowCount > 2) {
+			chainFlg = true;
+			countRowSameColor(state, key, 0, chainFlg);
+		} else if(colCount > 2) {
+			chainFlg = true;
+			countColSameColor(state, key, 0, chainFlg);
+		}
+		rowCount = 0;
+		colCount = 0;
+	});
+}
+
+export { CreatePanel, MovePanel, RiseUpPanel, FallPanel};
