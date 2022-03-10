@@ -2,7 +2,7 @@ import React,{ PureComponent} from "react";
 import {View} from "react-native";
 
 // -1: 削除, 0：パネル無し, 1: 赤, 2: 黄, 3: 青, 4: 緑, 5:紫
-const colors = ['','red','yellow','blue','green','purple'];
+const colors = ['white','red','yellow','blue','green','purple'];
 const BOX_SIZE=50;
 
 class Panel extends PureComponent {

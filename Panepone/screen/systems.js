@@ -16,7 +16,7 @@ const offset = [
 let panelIds = 0;
 let gameState = "START";
 let startPos = [0, 0];
-let previousTime = 0;
+let fallFlg = false;
 let upCount = 0;
 let downCount = 0;
 /**
@@ -207,109 +207,85 @@ const MovePanel = (state, { touches }) => {
 /**
  * 自動上昇処理
  * @param {*} state 
- * @param {*} time
  * @param {*} dispatch
  * @returns 
  */
-const RiseUpPanel = (state, { time, dispatch }) => {
+const RiseUpPanel = (state, { dispatch }) => {
 	
-	if (previousTime === 0 ){
-		previousTime = time.current;
-	}
+	upCount++;
 
-	if (time.current - previousTime > 1) {
-		previousTime = time.current;
+	if (upCount === 100) {
 		Object.keys(state).forEach(key=> {
 			let panel = state[key];
-			panel.pos = [
-				panel.pos[0]-1,
-				panel.pos[1]
-			]
+			if (panel.id <= (ROWS-1)*COLS) {
+				panel.panelState = state[panel.id + COLS].panelState;
+			}
+			
+			if (panel.id > (ROWS - 1) * COLS) {
+				let rowCount;
+				do {
+					panel.panelState = Math.floor(Math.random() * 5) + 1;
+					rowCount = 0;
+					rowCount = countRowSameColor(state, key, rowCount,false);
+				} while(rowCount > 2);
+			}
 		});
-		upCount++;
 
-		if (upCount % 50 == 0) {
-			Object.keys(state).forEach(key=> {
-				let panel = state[key];
-				panel.pos = [
-					panel.pos[0]+50,
-					panel.pos[1]
-				]
+		chain(state, [
+			(ROWS-2)*COLS+1,
+			(ROWS-2)*COLS+2,
+			(ROWS-2)*COLS+3,
+			(ROWS-2)*COLS+4,
+			(ROWS-2)*COLS+5,
+			(ROWS-2)*COLS+6
+		]);
 
-				if (Math.trunc((panel.id-1) / COLS) + 1 < 13) {
-					panel.panelState = state[panel.id + COLS].panelState;
-				}
-				
-				if (Math.trunc((panel.id-1) / COLS) + 1 === 13) {
-	        let rowCount;
-	        do {
-          	panel.panelState = Math.floor(Math.random() * 5) + 1;
-          	rowCount = 0;
-          	rowCount = countRowSameColor(state, key, rowCount,false);
-	        } while(rowCount > 2);
-				}
-				
-			});
-
-			chain(state, [
-				(ROWS-2)*COLS+1,
-				(ROWS-2)*COLS+2,
-				(ROWS-2)*COLS+3,
-				(ROWS-2)*COLS+4,
-				(ROWS-2)*COLS+5,
-				(ROWS-2)*COLS+6
-			]);
-
-			Object.keys(state).forEach(key=> {
-				let panel = state[key];
-				if (panel.id <= COLS && panel.panelState > 0){
-					// ゲームオーバ
-					dispatch("game-over");
-				}
-			});
-	}}
+		for (let i = 1; i <= COLS; i++){
+			let panel = state[i];
+			if (panel.panelState > 0){
+				// ゲームオーバ
+				dispatch("game-over");
+			}
+		}
 	
+		upCount = 0;
+	}
 	return state;
 }
 
-const FallPanel = (state, time) => {
-	Object.keys(state).sort((a,b) => (a > b ? -1:1)).forEach(key =>{
+const FallPanel = (state) => {
+
+	if (fallFlg) downCount++;
+	let movePanels=[];
+
+	Object.keys(state).sort((a,b) => (Number(a) > Number(b) ? -1:1)).forEach(key =>{
 		let panel = state[key];
-		if (panel.id + COLS < (ROWS - 1 ) * COLS) {
-			// 落下対象のパネルか判定
-			if (panel.panelState > 0 && 
-				(state[panel.id + COLS].panelState <= 0 || state[panel.id + COLS].isFalling)) {
-					panel.isFalling = true;
-					panel.pos = [
-						panel.pos[0] + 5,
-						panel.pos[1]
-					];
-					downCount++;
+		if (panel.id > COLS){
+			if (panel.panelState <= 0 && state[panel.id - COLS].panelState > 0){
+				fallFlg = true;
+			}
+		}
+
+		if (downCount === 10) {
+			if (panel.id > COLS && panel.id < (ROWS-1)*COLS) {
+				if (panel.panelState <= 0) {
+					let tmp = panel.panelState;
+					panel.panelState = state[panel.id - COLS].panelState;
+					state[panel.id - COLS].panelState = tmp;
+					movePanels.push(panel.id);
+				}
+			} else if (panel.id <= COLS) {
+				panel.panelState = 0;
+				fallFlg = false;
 			}
 		}
 	});
 
-	if (downCount === 10) {
-		Object.keys(state).sort((a,b) => (a > b ? -1:1)).forEach(key =>{
-			let panel = state[key];
-			if (panel.isFalling || (panel.id - COLS) > 0) {
-				panel.panelState = state[panel.id - COLS].panelState;
-				panel.isFalling = false;
-				panel.pos = [
-					panel.pos[0] - 50,
-					panel.pos[1]
-				]
-				downCount = 0;
-			} else if (panel.id - COLS <= 0) {
-				panel.panelState = 0;
-				panel.isFalling = false;
-				panel.pos = [
-					panel.pos[0] - 50,
-					panel.pos[1]
-				]
-			}
-		});
+	if (Object.keys(movePanels).length>0){
+		chain(state,movePanels);
+		movePanels=[];
 	}
+	if (!fallFlg) downCount = 0;
 	return state;
 }
 
